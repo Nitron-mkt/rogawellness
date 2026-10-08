@@ -10,6 +10,6 @@
    `python rank_influencers.py rank profiles.json > ranking.csv`
 6. (Opcional) **clockworks/tiktok-scraper** com `inputs/3_tiktok.json` para achar criadores no TikTok e procurá-los no Instagram.
 
-O ranking só considera perfis entre 100 mil e 2 milhões de seguidores (`MIN_FOLLOWERS`/`MAX_FOLLOWERS` no script)
+O ranking só considera perfis entre 50 mil e 2 milhões de seguidores (`MIN_FOLLOWERS`/`MAX_FOLLOWERS` no script)
 e pontua: engajamento, link/cupom de afiliado na bio, posts com cupom, frequência de #publi, região SP,
-aderência ao nicho e marcas premium citadas. Revise manualmente o top 30 antes de convidar.
+aderência ao nicho, marcas premium citadas e sinais de público 30-55 (mãe, médica, executiva, longevidade, marca própria); contas >1M com engajamento <1% perdem pontos. Revise manualmente o top 30 antes de convidar.

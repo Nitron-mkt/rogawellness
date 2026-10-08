@@ -13,7 +13,7 @@ import re
 import sys
 from collections import Counter
 
-MIN_FOLLOWERS = 100_000
+MIN_FOLLOWERS = 50_000
 MAX_FOLLOWERS = 2_000_000
 
 AFFILIATE_BIO = re.compile(
@@ -34,6 +34,14 @@ NICHE = re.compile(
     r"yoga|pilates|funcional|corrida|maratona|trail|banho de gelo|cold|"
     r"breath|respira|medita|biohack|longevidade|sauna|sound|bem[- ]estar|"
     r"wellness|nutri|sa[uú]de|skincare|fit|treino|personal|beach tennis",
+    re.I,
+)
+# Sinais de público 30-55 anos com renda (mulher madura, profissional, mãe)
+MATURE_AUDIENCE = re.compile(
+    r"m[aã]e d[eao]|maternidade|filhos|executiva|empres[aá]ria|fundadora|ceo|"
+    r"m[eé]dica|dermato|nutr[oó]loga|endocrino|fisioterapeuta|psic[oó]loga|"
+    r"menopausa|climat[eé]rio|40\+|50\+|longevidade|reposi[cç][aã]o hormonal|"
+    r"marca pr[oó]pria|@\w+(store|shop|oficial)",
     re.I,
 )
 PREMIUM_BRANDS = re.compile(
@@ -78,6 +86,7 @@ def score_profile(p):
     affiliate_bio = bool(AFFILIATE_BIO.search(bio))
     sp = bool(SP_REGION.search(all_text))
     niche_hits = len(set(m.lower() for m in NICHE.findall(all_text)))
+    mature = len(set(m.lower() for m in MATURE_AUDIENCE.findall(all_text)))
     brands = sorted(set(m.lower() for m in PREMIUM_BRANDS.findall(all_text)))
 
     score = 0.0
@@ -93,6 +102,10 @@ def score_profile(p):
     score += 15 if sp else 0
     score += min(niche_hits, 5) * 3
     score += min(len(brands), 3) * 5
+    score += min(mature, 3) * 6
+    # Contas gigantes tendem a público jovem/massa: penaliza engajamento baixo
+    if followers > 1_000_000 and engagement < 1:
+        score -= 15
 
     return {
         "username": p.get("username"),
@@ -105,6 +118,7 @@ def score_profile(p):
         "publis_ultimos_posts": publis,
         "regiao_sp": sp,
         "nichos": niche_hits,
+        "sinais_publico_30_55": mature,
         "marcas_premium": ", ".join(brands),
         "verificado": p.get("verified"),
         "categoria": p.get("businessCategoryName"),
