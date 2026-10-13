@@ -1,0 +1,186 @@
+{
+  "startUrls": [
+    {
+      "url": "https://www.uniquegarden.com.br/pt-br/sentir"
+    },
+    {
+      "url": "https://www.botanique.com.br/"
+    },
+    {
+      "url": "https://pontodeluz.com/agenda/lista/"
+    },
+    {
+      "url": "https://fasano.com.br/hotel/fasano-boa-vista/"
+    },
+    {
+      "url": "https://fasano.com.br/programa/spa-ritual/"
+    },
+    {
+      "url": "https://www.rosewoodhotels.com/pt/sao-paulo/wellness"
+    },
+    {
+      "url": "https://experienciaspalaciotangara.com.br/"
+    },
+    {
+      "url": "https://www.jwmarriottsaopaulo.com/"
+    },
+    {
+      "url": "https://emiliano.com.br/experiencias/day-spa/"
+    },
+    {
+      "url": "https://www.marriott.com/pt-br/hotels/saobr-renaissance-sao-paulo-hotel/overview/"
+    },
+    {
+      "url": "https://fasano.com.br/experiencias/?categoria=bem-estar"
+    },
+    {
+      "url": "https://emiliano.com.br/spa-rj/spa-santapele/"
+    },
+    {
+      "url": "https://rituaali.com.br/pre-reserva/"
+    },
+    {
+      "url": "https://lapinha.com.br/"
+    },
+    {
+      "url": "https://www.kurotel.com.br/programacao-anual"
+    },
+    {
+      "url": "https://ibiti.com/pt-br/categorias-do-guia/wellness-engenho/"
+    },
+    {
+      "url": "https://ibiti.com/pt-br/categorias-do-guia/wellness-village/"
+    },
+    {
+      "url": "https://txairesorts.com/spa-shamash/"
+    }
+  ],
+  "crawlerType": "playwright:adaptive",
+  "includeUrlGlobs": [
+    {
+      "glob": "https://emiliano.com.br/experiencias*"
+    },
+    {
+      "glob": "https://emiliano.com.br/experiencias/**"
+    },
+    {
+      "glob": "https://emiliano.com.br/spa-rj*"
+    },
+    {
+      "glob": "https://emiliano.com.br/spa-rj/**"
+    },
+    {
+      "glob": "https://experienciaspalaciotangara.com.br*"
+    },
+    {
+      "glob": "https://experienciaspalaciotangara.com.br/**"
+    },
+    {
+      "glob": "https://fasano.com.br/experiencias*"
+    },
+    {
+      "glob": "https://fasano.com.br/experiencias/**"
+    },
+    {
+      "glob": "https://fasano.com.br/hotel/fasano-boa-vista*"
+    },
+    {
+      "glob": "https://fasano.com.br/hotel/fasano-boa-vista/**"
+    },
+    {
+      "glob": "https://fasano.com.br/programa*"
+    },
+    {
+      "glob": "https://fasano.com.br/programa/**"
+    },
+    {
+      "glob": "https://ibiti.com*"
+    },
+    {
+      "glob": "https://ibiti.com/**"
+    },
+    {
+      "glob": "https://ibiti.com/pt-br/categorias-do-guia/wellness-engenho*"
+    },
+    {
+      "glob": "https://ibiti.com/pt-br/categorias-do-guia/wellness-engenho/**"
+    },
+    {
+      "glob": "https://lapinha.com.br*"
+    },
+    {
+      "glob": "https://lapinha.com.br/**"
+    },
+    {
+      "glob": "https://pontodeluz.com*"
+    },
+    {
+      "glob": "https://pontodeluz.com/**"
+    },
+    {
+      "glob": "https://rituaali.com.br*"
+    },
+    {
+      "glob": "https://rituaali.com.br/**"
+    },
+    {
+      "glob": "https://txairesorts.com*"
+    },
+    {
+      "glob": "https://txairesorts.com/**"
+    },
+    {
+      "glob": "https://www.botanique.com.br*"
+    },
+    {
+      "glob": "https://www.botanique.com.br/**"
+    },
+    {
+      "glob": "https://www.jwmarriottsaopaulo.com*"
+    },
+    {
+      "glob": "https://www.jwmarriottsaopaulo.com/**"
+    },
+    {
+      "glob": "https://www.kurotel.com.br*"
+    },
+    {
+      "glob": "https://www.kurotel.com.br/**"
+    },
+    {
+      "glob": "https://www.marriott.com/pt-br/hotels/saobr-renaissance-sao-paulo-hotel*"
+    },
+    {
+      "glob": "https://www.marriott.com/pt-br/hotels/saobr-renaissance-sao-paulo-hotel/**"
+    },
+    {
+      "glob": "https://www.rosewoodhotels.com/pt/sao-paulo*"
+    },
+    {
+      "glob": "https://www.rosewoodhotels.com/pt/sao-paulo/**"
+    },
+    {
+      "glob": "https://www.uniquegarden.com.br*"
+    },
+    {
+      "glob": "https://www.uniquegarden.com.br/**"
+    }
+  ],
+  "excludeUrlGlobs": [
+    {
+      "glob": "**/*.{pdf,jpg,jpeg,png,webp,gif,mp4,zip}"
+    },
+    {
+      "glob": "**/{en,es,en-us,en-gb}/**"
+    },
+    {
+      "glob": "**/{login,checkout,carrinho,cart,minha-conta}**"
+    }
+  ],
+  "maxCrawlDepth": 2,
+  "maxCrawlPages": 600,
+  "maxConcurrency": 5,
+  "respectRobotsTxtFile": true,
+  "saveMarkdown": true,
+  "removeCookieWarnings": true
+}

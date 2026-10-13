@@ -1,0 +1,8 @@
+{
+  "queries": "\"wellness retreat\" \"São Paulo\" hotel 2026\n\"retiro yoga\" Atibaia OR Joanópolis OR Mairiporã 2026\n\"retiro\" \"Bragança Paulista\" OR \"Nazaré Paulista\" OR \"Piracaia\" 2026\n\"retiro\" \"Serra da Cantareira\" OR \"Campos do Jordão\" bem-estar 2026\n\"day spa\" evento \"São Paulo\" 2026\n\"sound healing\" hotel \"São Paulo\" 2026\n\"sound healing\" retiro SP novembro 2026\n\"banho de gelo\" OR \"cold plunge\" evento \"São Paulo\" 2026\n\"breathwork\" imersão \"São Paulo\" 2026\n\"wellness weekend\" hotel Brasil 2026\n\"festival\" wellness OR \"bem-estar\" \"São Paulo\" 2026 patrocinadores\n\"longevidade\" evento \"São Paulo\" 2026 imersão\n\"yoga\" \"Fasano Boa Vista\" evento\n\"retiro\" \"Ponto de Luz\" facilitador 2026\n\"wellness\" \"Rosewood São Paulo\" parceiros\n\"spa\" Botanique yoga\n\"Unique Garden\" retiro OR imersão 2026\n\"Lapinha\" \"sound healing\" 2026\n\"Kurotel\" programação novembro 2026\nsympla retiro bem-estar \"São Paulo\" novembro 2026\nsympla \"sound healing\" OR breathwork \"São Paulo\" 2026",
+  "countryCode": "br",
+  "languageCode": "pt-BR",
+  "searchLanguage": "pt",
+  "maxPagesPerQuery": 2,
+  "mobileResults": false
+}

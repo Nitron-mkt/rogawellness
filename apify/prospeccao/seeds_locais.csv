@@ -1,0 +1,19 @@
+place_id,place_name,city,state,place_type,priority_hint,url,scope_prefix,group
+01,Unique Garden,Mairiporã,SP,hotel,A,https://www.uniquegarden.com.br/pt-br/sentir,https://www.uniquegarden.com.br/,
+02,Botanique Hotel,Campos do Jordão,SP,hotel,A,https://www.botanique.com.br/,https://www.botanique.com.br/,
+03,Hotel Ponto de Luz,Joanópolis,SP,retiro,A,https://pontodeluz.com/agenda/lista/,https://pontodeluz.com/,
+04,Fasano Boa Vista,Porto Feliz,SP,hotel,A,https://fasano.com.br/hotel/fasano-boa-vista/,https://fasano.com.br/hotel/fasano-boa-vista,Fasano
+05,Boa Vista Surf Lodge,Porto Feliz,SP,resort,A,https://fasano.com.br/programa/spa-ritual/,https://fasano.com.br/programa/,Fasano
+06,Rosewood São Paulo — Asaya Spa,São Paulo,SP,hotel,A,https://www.rosewoodhotels.com/pt/sao-paulo/wellness,https://www.rosewoodhotels.com/pt/sao-paulo/,
+07,Palácio Tangará — Spa,São Paulo,SP,hotel,A,https://experienciaspalaciotangara.com.br/,https://experienciaspalaciotangara.com.br/,
+08,JW Marriott São Paulo — Spa by JW,São Paulo,SP,hotel,A,https://www.jwmarriottsaopaulo.com/,https://www.jwmarriottsaopaulo.com/,
+09,Hotel Emiliano São Paulo — Spa Santapele,São Paulo,SP,hotel,A,https://emiliano.com.br/experiencias/day-spa/,https://emiliano.com.br/experiencias/,Emiliano
+10,Renaissance São Paulo — The Spa,São Paulo,SP,hotel,B,https://www.marriott.com/pt-br/hotels/saobr-renaissance-sao-paulo-hotel/overview/,https://www.marriott.com/pt-br/hotels/saobr-renaissance-sao-paulo-hotel/,
+11,Fasano Rio de Janeiro,Rio de Janeiro,RJ,hotel,B,https://fasano.com.br/experiencias/?categoria=bem-estar,https://fasano.com.br/experiencias,Fasano
+12,Hotel Emiliano Rio — Spa Santapele,Rio de Janeiro,RJ,hotel,B,https://emiliano.com.br/spa-rj/spa-santapele/,https://emiliano.com.br/spa-rj/,Emiliano
+13,Rituaali Clínica & Spa,Penedo,RJ,spa,B,https://rituaali.com.br/pre-reserva/,https://rituaali.com.br/,
+14,Lapinha SPA,Lapa,PR,spa,B,https://lapinha.com.br/,https://lapinha.com.br/,
+15,Kurotel,Gramado,RS,spa,C,https://www.kurotel.com.br/programacao-anual,https://www.kurotel.com.br/,
+16,IBITI / Engenho Lodge — Raízes Spa,Lima Duarte,MG,hotel,B,https://ibiti.com/pt-br/categorias-do-guia/wellness-engenho/,https://ibiti.com/pt-br/categorias-do-guia/wellness-engenho,IBITI
+17,IBITI / Village — Village Spa,Lima Duarte,MG,hotel,B,https://ibiti.com/pt-br/categorias-do-guia/wellness-village/,https://ibiti.com/,IBITI
+18,Txai Resort & Spa — Spa Shamash,Itacaré,BA,resort,C,https://txairesorts.com/spa-shamash/,https://txairesorts.com/,
