@@ -18,6 +18,7 @@ Uso:
       [--posts hashtags.json influencer_posts.json] > leads.csv
 """
 import argparse
+import ast
 import csv
 import re
 import sys
@@ -58,6 +59,30 @@ THEMES = [
 ]
 
 
+# Alguns exports do Apify vêm com números e listas como texto ("12", "['a', 'b']")
+def num(value):
+    try:
+        return int(float(value))
+    except (TypeError, ValueError):
+        return 0
+
+
+def as_list(value):
+    if isinstance(value, str):
+        try:
+            value = ast.literal_eval(value)
+        except (ValueError, SyntaxError):
+            return []
+    return value if isinstance(value, list) else []
+
+
+def as_bool(value):
+    return value is True or str(value).lower() == "true"
+
+
+PORTUGUESE = re.compile(r"\b(voc[eê]|n[aã]o|para|muito|com|mais|dia|corpo|sa[uú]de|treino|tamb[eé]m|hoje|aqui)\b", re.I)
+
+
 def first_name(full_name):
     name = re.sub(r"[^\wÀ-ÿ\s'-]", " ", full_name or "").strip()
     first = name.split()[0] if name.split() else ""
@@ -94,16 +119,20 @@ def cmd_posts(paths):
     for path in paths:
         for p in load(path):
             url = p.get("url")
-            comments = p.get("commentsCount") or 0
-            text = " ".join(filter(None, [p.get("caption"), p.get("locationName"), " ".join(p.get("hashtags") or [])]))
-            if not url or url in seen or comments < MIN_COMMENTS_ON_POST or not NICHE.search(text):
+            comments = num(p.get("commentsCount"))
+            text = " ".join(filter(None, [p.get("caption"), p.get("locationName"), " ".join(map(str, as_list(p.get("hashtags"))))]))
+            if (not url or url in seen or comments < MIN_COMMENTS_ON_POST or not NICHE.search(text)
+                    or not PORTUGUESE.search(p.get("caption") or "")):
                 continue
             seen.add(url)
             # SP e posts de evento primeiro
             prio = (2 if SP_REGION.search(text) else 0) + (1 if re.search(r"evento|retiro|imers|ingresso|vagas", text, re.I) else 0)
             rows.append((prio, comments, url))
-    for _, _, url in sorted(rows, reverse=True):
+    rows.sort(reverse=True)
+    for _, _, url in rows:
         print(url)
+    total = sum(c for _, c, _ in rows)
+    print(f"{len(rows)} posts, {total} comentários no total", file=sys.stderr)
 
 
 def cmd_influencers(path, top):
@@ -168,10 +197,10 @@ def cmd_rank(comment_paths, profile_paths, post_paths):
         prof = profiles.get(key)
         if not prof or key in influencers:
             continue
-        followers = prof.get("followersCount") or 0
-        if followers > MAX_FOLLOWERS or (prof.get("postsCount") or 0) < MIN_POSTS:
+        followers = num(prof.get("followersCount"))
+        if followers > MAX_FOLLOWERS or num(prof.get("postsCount")) < MIN_POSTS:
             continue
-        if prof.get("isBusinessAccount") and not re.search(r"pessoal|criador|blogueir|atleta|personal", prof.get("businessCategoryName") or "", re.I):
+        if as_bool(prof.get("isBusinessAccount")) and not re.search(r"pessoal|criador|blogueir|atleta|personal", prof.get("businessCategoryName") or "", re.I):
             continue  # loja/clínica/estúdio: não é comprador final
 
         scored = sorted(((comment_score(c), c) for c in comments), key=lambda x: -x[0][0])
@@ -222,7 +251,7 @@ def cmd_rank(comment_paths, profile_paths, post_paths):
             "data_comentario": best["timestamp"][:10],
             "tema": theme_of(post_text.get(best["post_url"].rstrip("/"), "") + " " + best["text"]),
             "seguidores": followers,
-            "privado": prof.get("private"),
+            "privado": as_bool(prof.get("private")),
             "bio": (prof.get("biography") or "").replace("\n", " ")[:160],
         }
         lead["dm_sugerida"] = suggested_dm(lead)
