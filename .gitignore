@@ -1,1 +1,3 @@
 apify/prospeccao/saida/
+*.local.json
+leads*.csv

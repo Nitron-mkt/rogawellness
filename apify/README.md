@@ -16,7 +16,39 @@ aderência ao nicho, marcas premium citadas e sinais de público 30-55 (mãe, m�
 
 ---
 
-# Prospecção B2B de parceiros e eventos · `prospeccao/`
+# Compradores para DM manual · `rank_buyers.py`
+
+Objetivo: achar **pessoas** que já comentaram com interesse em posts de wellness ou de eventos parecidos e montar uma lista para a equipe mandar **DM manual** pela conta da Roga.
+
+## Passo a passo no Apify
+1. Rode as etapas 1–5 do ranking de influencers acima (`hashtags.json` e `ranking.csv`).
+2. Gere os perfis para o **apify/instagram-scraper**: `python rank_buyers.py influencers ranking.csv --top 30`.
+   Junte com perfis de eventos, estúdios e retiros parecidos em SP e cole em `directUrls` de `inputs/6_influencer_posts.json`. Exporte como `influencer_posts.json`.
+3. Escolha os posts que valem raspar: `python rank_buyers.py posts hashtags.json influencer_posts.json > post_urls.txt`.
+   Isso pega posts do nicho com 5 ou mais comentários, com SP e posts de evento primeiro.
+4. Cole `post_urls.txt` em `inputs/7_comments.json` e rode **apify/instagram-comment-scraper**. Exporte como `comments.json`.
+5. Liste quem tem intenção: `python rank_buyers.py commenters comments.json > commenters.txt`.
+6. Rode **apify/instagram-profile-scraper** com `commenters.txt` e exporte como `commenter_profiles.json`.
+7. Gere o ranking final:
+   `python rank_buyers.py rank --comments comments.json --profiles commenter_profiles.json --posts hashtags.json influencer_posts.json > leads.csv`
+
+## O que tem no `leads.csv`
+@, link do perfil, primeiro nome, score, intenção (forte/média), motivos, o comentário e o post de origem, e uma **DM sugerida** já personalizada com nome, post e tema.
+As colunas `status`, `enviado_em`, `respondeu` e `comprou` servem para a equipe marcar o andamento.
+
+Pontuação: pergunta ou intenção de compra ("quero ir", "quanto?", "link?") vale +30; marcar amigo +15; comentar em vários posts do nicho +8 por post a mais; SP na bio +20; sinais de 30–55 anos ou profissionais +8 cada.
+Ficam de fora: lojas, estúdios e clínicas, perfis com mais de 30 mil seguidores, perfis com menos de 3 posts, o dono do post e comentários de spam.
+
+## Boas práticas para não bloquear a conta (e respeitar a LGPD)
+- No máximo **20–30 DMs por dia**, enviadas à mão, com pausas entre elas. Nada de automação de envio.
+- Comece pela intenção **forte**. Edite a DM sugerida para não mandar o texto idêntico para todo mundo.
+- Primeira mensagem curta e pedindo permissão ("posso te mandar a programação?"). No máximo **1 follow-up**.
+- Se a pessoa disser que não quer, marque `status = nao_contatar` e não insista.
+- A lista não sai da equipe e é **apagada depois do evento** (07/11). Não guarde telefone nem e-mail.
+
+---
+
+# (Opcional) Prospecção B2B de parceiros e eventos · `prospeccao/`
 
 Baseado no briefing `prospeccao/briefing_gpt.md`, que tem 18 locais-semente. O objetivo é achar **parceiros** (hotéis, spas, retiros, organizadores de eventos e facilitadores) para divulgar o Roga Day para as **próprias bases opt-in**, com cupom e UTM. Nada aqui coleta hóspedes, seguidores ou participantes.
 

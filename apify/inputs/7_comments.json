@@ -1,0 +1,7 @@
+{
+  "directUrls": [
+    "COLE AQUI a saída de: python rank_buyers.py posts hashtags.json influencer_posts.json"
+  ],
+  "resultsLimit": 300,
+  "includeNestedComments": true
+}

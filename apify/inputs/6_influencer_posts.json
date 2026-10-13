@@ -1,0 +1,10 @@
+{
+  "directUrls": [
+    "COLE AQUI a saída de: python rank_buyers.py influencers ranking.csv --top 30",
+    "e perfis de eventos/estúdios/retiros parecidos em SP, ex.: https://www.instagram.com/<perfil>/"
+  ],
+  "resultsType": "posts",
+  "resultsLimit": 20,
+  "onlyPostsNewerThan": "2026-06-01",
+  "addParentData": false
+}
