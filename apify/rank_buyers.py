@@ -35,14 +35,14 @@ PRICE_PER_RESULT = 2.60 / 1000  # Apify plano Free (comentários e perfis)
 INTENT_STRONG = re.compile(
     r"quero (?:ir|muito|participar|fazer)|onde (?:compr|vend|é|fica)|como (?:fa[cç]o|faz|participo|compro)|"
     r"quanto|valor|pre[cç]o|ingresso|link|tem vaga|pr[oó]xim[ao] (?:edi[cç][aã]o|data|turma|evento)|"
-    r"quando (?:vai|tem|ser[aá])|vai ter|me (?:avisa|chama|manda)|inscri|vou (?:sim|estar|participar)|"
-    r"bora\b|partiu|vamos\??$",
+    r"quando (?:vai|tem|ser[aá]|abre)|vai ter|me (?:avisa|chama|manda)|inscri|vou (?:sim|estar|participar)|"
+    r"qual o valor|quanto [eé]",
     re.I,
 )
 # Interesse: desejo/afinidade
 INTENT_SOFT = re.compile(
     r"quero|preciso|sonho|amo|amei|que demais|incr[ií]vel|maravilh|necessito|que vontade|apaixonad|"
-    r"top demais|perfeito|lindo|experi[eê]ncia|fiz e amei|j[aá] fiz|melhor coisa",
+    r"top demais|perfeito|lindo|experi[eê]ncia|fiz e amei|j[aá] fiz|melhor coisa|bora\b|partiu|vamos",
     re.I,
 )
 MENTION = re.compile(r"@([A-Za-z0-9_.]{2,30})")
