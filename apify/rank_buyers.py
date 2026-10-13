@@ -29,6 +29,7 @@ from rank_influencers import MATURE_AUDIENCE, NICHE, PREMIUM_BRANDS, SP_REGION, 
 MAX_FOLLOWERS = 30_000   # acima disso é criador/influencer, não comprador
 MIN_POSTS = 3            # filtra perfis vazios/bots
 MIN_COMMENTS_ON_POST = 5
+PRICE_PER_RESULT = 2.60 / 1000  # Apify plano Free (comentários e perfis)
 
 # Intenção forte: pergunta de compra / quer ir
 INTENT_STRONG = re.compile(
@@ -113,7 +114,7 @@ def suggested_dm(lead):
             f"Posso te mandar a programação?")
 
 
-def cmd_posts(paths):
+def cmd_posts(paths, max_posts=0, per_post=0):
     seen = set()
     rows = []
     for path in paths:
@@ -129,10 +130,12 @@ def cmd_posts(paths):
             prio = (2 if SP_REGION.search(text) else 0) + (1 if re.search(r"evento|retiro|imers|ingresso|vagas", text, re.I) else 0)
             rows.append((prio, comments, url))
     rows.sort(reverse=True)
+    rows = rows[:max_posts] if max_posts else rows
     for _, _, url in rows:
         print(url)
-    total = sum(c for _, c, _ in rows)
-    print(f"{len(rows)} posts, {total} comentários no total", file=sys.stderr)
+    total = sum(min(c, per_post) if per_post else c for _, c, _ in rows)
+    print(f"{len(rows)} posts, até {total} comentários "
+          f"(~US$ {total * PRICE_PER_RESULT:.2f})", file=sys.stderr)
 
 
 def cmd_influencers(path, top):
@@ -168,12 +171,13 @@ def comment_score(c):
     return (30 if strong else 0) + (12 if soft else 0) + (15 if tagged else 0), strong, tagged
 
 
-def cmd_commenters(paths):
+def cmd_commenters(paths, limit=0):
     by_user = collect_comments(paths, {})
     ranked = sorted(by_user.values(), key=lambda cs: -max(comment_score(c)[0] for c in cs) - 5 * len(cs))
-    for cs in ranked:
-        if max(comment_score(c)[0] for c in cs) > 0:
-            print(cs[0]["username"])
+    names = [cs[0]["username"] for cs in ranked if max(comment_score(c)[0] for c in cs) > 0]
+    names = names[:limit] if limit else names
+    print("\n".join(names))
+    print(f"{len(names)} perfis (~US$ {len(names) * PRICE_PER_RESULT:.2f})", file=sys.stderr)
 
 
 def cmd_rank(comment_paths, profile_paths, post_paths):
@@ -269,22 +273,27 @@ def cmd_rank(comment_paths, profile_paths, post_paths):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
-    sub.add_parser("posts").add_argument("json", nargs="+")
+    po = sub.add_parser("posts")
+    po.add_argument("json", nargs="+")
+    po.add_argument("--max-posts", type=int, default=0, help="só os N melhores posts")
+    po.add_argument("--per-post", type=int, default=0, help="resultsLimit que será usado no comment scraper (para estimar custo)")
     inf = sub.add_parser("influencers")
     inf.add_argument("ranking_csv")
     inf.add_argument("--top", type=int, default=30)
-    sub.add_parser("commenters").add_argument("json", nargs="+")
+    co = sub.add_parser("commenters")
+    co.add_argument("json", nargs="+")
+    co.add_argument("--max", type=int, default=0, help="só os N perfis com mais intenção")
     r = sub.add_parser("rank")
     r.add_argument("--comments", nargs="+", required=True)
     r.add_argument("--profiles", nargs="+", required=True)
     r.add_argument("--posts", nargs="*", default=[])
     a = ap.parse_args()
     if a.cmd == "posts":
-        cmd_posts(a.json)
+        cmd_posts(a.json, a.max_posts, a.per_post)
     elif a.cmd == "influencers":
         cmd_influencers(a.ranking_csv, a.top)
     elif a.cmd == "commenters":
-        cmd_commenters(a.json)
+        cmd_commenters(a.json, a.max)
     else:
         cmd_rank(a.comments, a.profiles, a.posts)
 
