@@ -110,21 +110,40 @@ def theme_of(text):
     return "bem-estar"
 
 
+# Proposta do evento. "Emoções" no lugar de "espírito" para não gerar objeção religiosa.
+PITCH = [
+    "o Roga Wellness Day: 12 horas de experiências para cuidar do corpo, da mente e das emoções, no meio da natureza em Atibaia",
+    "o Roga Wellness Day, em Atibaia: são 12 horas de experiências pensadas para cuidar do corpo, acalmar a mente e equilibrar as emoções",
+    "o Roga Wellness Day: um dia inteiro (12 horas!) de experiências para desacelerar e cuidar de corpo, mente e emoções, em meio à natureza de Atibaia",
+]
+CLOSE_STRONG = [
+    "Quer que eu te mande a programação completa e o link do ingresso?",
+    "Posso te mandar a programação e os valores?",
+    "Te mando a programação completa?",
+]
+CLOSE_SOFT = [
+    "Posso te mandar a programação?",
+    "Quer conhecer a programação?",
+    "Se fizer sentido pra você, te mando os detalhes 😊",
+]
+
+
 def suggested_dm(lead):
-    hi = f"Oi, {lead['nome']}!" if lead["nome"] else "Oi!"
+    """DM personalizada; o texto varia por pessoa (hash do @) para não sair idêntico em todas."""
+    k = sum(map(ord, lead["username"]))
+    hi = f"Oi, {lead['nome']}, tudo bem?" if lead["nome"] else "Oi, tudo bem?"
     where = f"no post da @{lead['post_owner']}" if lead["post_owner"] else "num post"
-    tema = lead["tema"]
+    pitch = PITCH[k % len(PITCH)]
+    date = "Dia 07/11 acontece"
     if lead["intencao"] == "forte":
-        return (f"{hi} Vi seu comentário {where} sobre {tema} e lembrei de você 😊 "
-                f"Dia 07/11 vai rolar o Roga Wellness Day em Atibaia, um dia inteiro dedicado a bem-estar e natureza. "
-                f"Quer que eu te mande a programação e o link do ingresso?")
+        return (f"{hi} Vi seu comentário {where} e achei que você ia curtir saber disso 😊 "
+                f"{date} {pitch}. {CLOSE_STRONG[k % len(CLOSE_STRONG)]}")
     if lead["marcou_amigo"]:
-        return (f"{hi} Vi que você marcou alguém {where} sobre {tema} 💛 "
-                f"Dia 07/11 tem o Roga Wellness Day em Atibaia, um dia inteiro de bem-estar — ótimo para ir junto. "
-                f"Posso te mandar os detalhes?")
-    return (f"{hi} Vi seu comentário {where} sobre {tema}. "
-            f"Dia 07/11 vai rolar o Roga Wellness Day em Atibaia, um dia inteiro dedicado a bem-estar. "
-            f"Posso te mandar a programação?")
+        return (f"{hi} Vi que você marcou alguém {where} 💛 "
+                f"{date} {pitch}. É o tipo de dia perfeito pra viver junto com quem a gente gosta. "
+                f"{CLOSE_SOFT[k % len(CLOSE_SOFT)]}")
+    return (f"{hi} Vi seu comentário {where} e pelo seu perfil acho que você vai se identificar 🌿 "
+            f"{date} {pitch}. {CLOSE_SOFT[k % len(CLOSE_SOFT)]}")
 
 
 def cmd_posts(paths, max_posts=0, per_post=0):
