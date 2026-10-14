@@ -34,11 +34,24 @@ PRICE_PER_RESULT = 2.60 / 1000  # Apify plano Free (comentários e perfis)
 # Intenção forte: pergunta de compra / quer ir
 INTENT_STRONG = re.compile(
     r"quero (?:ir|muito|participar|fazer)|onde (?:compr|vend|é|fica)|como (?:fa[cç]o|faz|participo|compro)|"
-    r"quanto|valor|pre[cç]o|ingresso|link|tem vaga|pr[oó]xim[ao] (?:edi[cç][aã]o|data|turma|evento)|"
-    r"quando (?:vai|tem|ser[aá]|abre)|vai ter|me (?:avisa|chama|manda)|inscri|vou (?:sim|estar|participar)|"
-    r"qual o valor|quanto [eé]",
+    r"quanto (?:custa|[eé]|fica|sai|t[aá]|ser[aá])|qual (?:o )?valor|valores|valor\?|pre[cç]o|ingresso|"
+    r"(?:cad[eê]|qual|tem|manda|passa)\W+(?:o )?link|link (?:da|de|pra|para) (?:inscri|compra)|tem vaga|"
+    r"pr[oó]xim[ao] (?:edi[cç][aã]o|data|turma|evento)|quando (?:vai|tem|ser[aá]|abre)|vai ter|"
+    r"me (?:avisa|chama|manda)|(?:como|onde|quando)\b.{0,25}inscri|inscri[cç][oõ]es? (?:abert|abre)|"
+    r"n[aã]o consegui\b.{0,30}inscri|vou (?:sim|estar|participar)",
     re.I,
 )
+# Quem está vendendo/repassando não é comprador
+SELLER = re.compile(r"\bvendo\b|repasso|troco titularidade|transfiro", re.I)
+# Sinais de que a pessoa mora longe de SP (bio ou local dos posts)
+OTHER_REGION = re.compile(
+    r"\b(?:rj|mg|ba|pr|sc|rs|df|go|pe|ce|es|am|pa|mt|ms|rn|pb|al|se|pi|ma|to|ro)\b|rio de janeiro|niter[oó]i|maric[aá]|"
+    r"floripa|florian[oó]polis|bras[ií]lia|belo horizonte|\bbh\b|curitiba|salvador|recife|fortaleza|"
+    r"porto alegre|goi[aâ]nia|vit[oó]ria|natal|manaus|bel[eé]m|bauru|ribeir[aã]o preto|portugal|lisboa|"
+    r"\busa\b|eua|miami|argentina|paraguai",
+    re.I,
+)
+
 # Interesse: desejo/afinidade
 INTENT_SOFT = re.compile(
     r"quero|preciso|sonho|amo|amei|que demais|incr[ií]vel|maravilh|necessito|que vontade|apaixonad|"
@@ -207,6 +220,9 @@ def cmd_rank(comment_paths, profile_paths, post_paths):
         if as_bool(prof.get("isBusinessAccount")) and not re.search(r"pessoal|criador|blogueir|atleta|personal", prof.get("businessCategoryName") or "", re.I):
             continue  # loja/clínica/estúdio: não é comprador final
 
+        comments = [c for c in comments if not SELLER.search(c["text"])]
+        if not comments:
+            continue
         scored = sorted(((comment_score(c), c) for c in comments), key=lambda x: -x[0][0])
         (best_pts, strong, tagged), best = scored[0]
         posts = {c["post_url"] for c in comments}
@@ -222,12 +238,19 @@ def cmd_rank(comment_paths, profile_paths, post_paths):
         if len(posts) > 1:
             score += min(len(posts) - 1, 4) * 8
             reasons.append(f"comentou em {len(posts)} posts do nicho")
+        post_places = " ".join(str(x.get("locationName") or "") for x in as_list(prof.get("latestPosts")) if isinstance(x, dict))
         if SP_REGION.search(bio):
             score += 20
             reasons.append("SP na bio")
+        elif SP_REGION.search(post_places):
+            score += 12
+            reasons.append("posta de SP")
+        elif OTHER_REGION.search(bio) or OTHER_REGION.search(post_places):
+            score -= 25
+            reasons.append("parece ser de fora de SP")
         elif SP_REGION.search(context):
-            score += 8
-            reasons.append("post/evento em SP")
+            score += 4
+            reasons.append("comentou em post de SP")
         mature = len(set(m.lower() for m in MATURE_AUDIENCE.findall(bio)))
         if mature:
             score += min(mature, 2) * 8
