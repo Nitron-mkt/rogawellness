@@ -42,6 +42,14 @@ INTENT_STRONG = re.compile(
     r"n[aã]o consegui\b.{0,30}inscri|vou (?:sim|estar|participar)",
     re.I,
 )
+# Profissionais e negócios do nicho: tendem a responder oferecendo serviço. Viram lista de parceiros/afiliados.
+PROFESSIONAL = re.compile(
+    r"terapeut|terapias|instrutor|professor|prof[ªa]\b|personal|massoterap|facilitador|yogini|coach|nutricionist|"
+    r"psic[oó]log|fisioterap|esteticist|studio|est[uú]dio|espa[cç]o\b|cl[ií]nica|agend|atendimento|consult[oó]rio|"
+    r"cursos?\b|aulas?\b|mentor|ayurv|reiki|sound ?heal|healer|\bcrp\b|\bcrn\b|crefito|rep\. comercial|"
+    r"idealizador|fundador|unhas|sal[aã]o|doceria|papelaria|snacks|skin|nutrition|loja|@\w+(?:store|shop)",
+    re.I,
+)
 # Quem está vendendo/repassando não é comprador
 SELLER = re.compile(r"\bvendo\b|repasso|troco titularidade|transfiro", re.I)
 # Sinais de que a pessoa mora longe de SP (bio ou local dos posts)
@@ -146,6 +154,15 @@ def suggested_dm(lead):
                 f"{CLOSE_SOFT[k % len(CLOSE_SOFT)]}")
     return (f"{hi} Vi seu comentário {where} e pelo seu perfil acho que você vai se identificar 🌿 "
             f"{date} {pitch}. {CLOSE_SOFT[k % len(CLOSE_SOFT)]}")
+
+
+def partner_dm(lead):
+    """Profissionais do nicho: convite para indicar o evento à própria comunidade, com comissão/cupom."""
+    hi = f"Oi, {lead['nome']}, tudo bem?" if lead["nome"] else "Oi, tudo bem?"
+    return (f"{hi} Vi seu trabalho por aqui e achei muito alinhado com o que estamos criando 🌿 "
+            f"Dia 07/11 acontece o Roga Wellness Day, em Atibaia: 12 horas de experiências para cuidar do corpo, "
+            f"da mente e das emoções. Estamos buscando profissionais parceiros para indicar o evento aos seus "
+            f"alunos e clientes, com cupom exclusivo e comissão por ingresso vendido. Posso te explicar como funciona?")
 
 
 def cmd_posts(paths, max_posts=0, per_post=0):
@@ -305,7 +322,9 @@ def cmd_rank(comment_paths, profile_paths, post_paths):
         if not prof.get("profilePicUrl") and not prof.get("profilePicUrlHD"):
             score -= 10
 
+        tipo = "profissional" if PROFESSIONAL.search(f"{bio} {prof['username']}") else "consumidor"
         lead = {
+            "tipo": tipo,
             "username": prof["username"],
             "perfil": f"https://instagram.com/{prof['username']}",
             "nome": first_name(prof.get("fullName")),
@@ -322,7 +341,7 @@ def cmd_rank(comment_paths, profile_paths, post_paths):
             "privado": as_bool(prof.get("private")),
             "bio": (prof.get("biography") or "").replace("\n", " ")[:160],
         }
-        lead["dm_sugerida"] = suggested_dm(lead)
+        lead["dm_sugerida"] = partner_dm(lead) if tipo == "profissional" else suggested_dm(lead)
         lead.update({"status": "", "enviado_em": "", "respondeu": "", "comprou": ""})
         rows.append(lead)
 
