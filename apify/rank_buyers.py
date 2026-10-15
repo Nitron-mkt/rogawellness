@@ -20,6 +20,7 @@ Uso:
 import argparse
 import ast
 import csv
+import json
 import re
 import sys
 from collections import defaultdict
@@ -33,7 +34,7 @@ PRICE_PER_RESULT = 2.60 / 1000  # Apify plano Free (comentários e perfis)
 
 # Intenção forte: pergunta de compra / quer ir
 INTENT_STRONG = re.compile(
-    r"quero (?:ir|muito|participar|fazer)|onde (?:compr|vend|é|fica)|como (?:fa[cç]o|faz|participo|compro)|"
+    r"quero (?:ir|muito|participar|fazer)|j[aá] quero|me convid|quero conhecer|quero viver|onde (?:compr|vend|é|fica)|como (?:fa[cç]o|faz|participo|compro)|"
     r"quanto (?:custa|[eé]|fica|sai|t[aá]|ser[aá])|qual (?:o )?valor|valores|valor\?|pre[cç]o|ingresso|"
     r"(?:cad[eê]|qual|tem|manda|passa)\W+(?:o )?link|link (?:da|de|pra|para) (?:inscri|compra)|tem vaga|"
     r"pr[oó]xim[ao] (?:edi[cç][aã]o|data|turma|evento)|quando (?:vai|tem|ser[aá]|abre)|vai ter|"
@@ -58,6 +59,7 @@ INTENT_SOFT = re.compile(
     r"top demais|perfeito|lindo|experi[eê]ncia|fiz e amei|j[aá] fiz|melhor coisa|bora\b|partiu|vamos",
     re.I,
 )
+GIVEAWAY = re.compile(r"sorteio|sortear|giveaway|concorrer|marque \d|marque (?:um|uma|dois|duas|seus|suas|amig)|ganhador|regras?:", re.I)
 MENTION = re.compile(r"@([A-Za-z0-9_.]{2,30})")
 SPAM = re.compile(r"promo|divulga|parceria\?|collab|seguidores|sigam|follow|dm (?:pra|para)|chama no direct|"
                   r"ganhe|renda extra|https?://", re.I)
@@ -168,6 +170,26 @@ def cmd_posts(paths, max_posts=0, per_post=0):
     total = sum(min(c, per_post) if per_post else c for _, c, _ in rows)
     print(f"{len(rows)} posts, até {total} comentários "
           f"(~US$ {total * PRICE_PER_RESULT:.2f})", file=sys.stderr)
+
+
+def cmd_extract_comments(paths):
+    """Converte os latestComments que o instagram-scraper já traz junto dos posts para o formato do
+    instagram-comment-scraper (economiza rodar o raspador de comentários). Ignora posts de sorteio."""
+    out, skipped = [], 0
+    for path in paths:
+        for p in load(path):
+            if p.get("error") or not p.get("url"):
+                continue
+            if GIVEAWAY.search(p.get("caption") or ""):
+                skipped += 1
+                continue
+            for c in as_list(p.get("latestComments")):
+                if (isinstance(c, dict) and c.get("ownerUsername")
+                        and c["ownerUsername"].lower() != (p.get("ownerUsername") or "").lower()):
+                    out.append({"postUrl": p["url"], "ownerUsername": c["ownerUsername"], "text": c.get("text") or "",
+                                "timestamp": c.get("timestamp") or ""})
+    json.dump(out, sys.stdout, ensure_ascii=False)
+    print(f"{len(out)} comentários extraídos ({skipped} posts de sorteio ignorados)", file=sys.stderr)
 
 
 def cmd_influencers(path, top):
@@ -322,6 +344,7 @@ def main():
     inf = sub.add_parser("influencers")
     inf.add_argument("ranking_csv")
     inf.add_argument("--top", type=int, default=30)
+    sub.add_parser("extract-comments").add_argument("json", nargs="+")
     co = sub.add_parser("commenters")
     co.add_argument("json", nargs="+")
     co.add_argument("--max", type=int, default=0, help="só os N perfis com mais intenção")
@@ -332,6 +355,8 @@ def main():
     a = ap.parse_args()
     if a.cmd == "posts":
         cmd_posts(a.json, a.max_posts, a.per_post)
+    elif a.cmd == "extract-comments":
+        cmd_extract_comments(a.json)
     elif a.cmd == "influencers":
         cmd_influencers(a.ranking_csv, a.top)
     elif a.cmd == "commenters":
