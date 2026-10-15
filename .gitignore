@@ -2,3 +2,4 @@ apify/prospeccao/saida/
 apify/saida/
 *.local.json
 leads*.csv
+__pycache__/
