@@ -69,3 +69,11 @@ Baseado no briefing `prospeccao/briefing_gpt.md`, que tem 18 locais-semente. O o
 - `roga_prospeccao.json`, `roga_top20_oportunidades.md` e `roga_erros_de_coleta.md`.
 
 Limitações: as datas sem ano são inferidas (confidence=low). A distância é em **linha reta** até Atibaia. A cidade de locais novos é inferida do texto. Todo evento sai como `needs_review`, então valide na página-fonte antes de usar em proposta.
+
+## Painel de envio (`painel_dm.py`)
+`python painel_dm.py leads.csv > painel_dm.html` gera uma página que abre no navegador. Cada pessoa vira um card com a DM editável e os botões **Copiar e abrir Direct** (abre a conversa pelo `ig.me`), **Perfil**, **Marcar enviada** e **Não contatar**.
+O painel conta quantas DMs foram enviadas no dia e avisa ao passar de 30. O progresso fica salvo no navegador e pode ser exportado em CSV. O envio é sempre manual, para não arriscar a conta.
+Os arquivos de `saida/` têm dados de pessoas e ficam fora do git.
+
+## Rodada 2: perfis de wellness (`inputs/9_perfis_wellness.json`)
+Ficou definida depois do teste: hashtags de corrida trouxeram o público errado. Esta rodada usa 15 perfis de yoga, sound healing, breathwork e recovery tirados dos dados do teste, e roda no **apify/instagram-scraper**.
