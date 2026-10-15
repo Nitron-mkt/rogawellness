@@ -35,7 +35,7 @@ PRICE_PER_RESULT = 2.60 / 1000  # Apify plano Free (comentários e perfis)
 # Intenção forte: pergunta de compra / quer ir
 INTENT_STRONG = re.compile(
     r"quero (?:ir|muito|participar|fazer)|j[aá] quero|me convid|quero conhecer|quero viver|onde (?:compr|vend|é|fica)|como (?:fa[cç]o|faz|participo|compro)|"
-    r"quanto (?:custa|[eé]|fica|sai|t[aá]|ser[aá])|qual (?:o )?valor|valores|valor\?|pre[cç]o|ingresso|"
+    r"quanto (?:custa|[eé]\b|fica|sai|t[aá]\b|ser[aá])|qual (?:o )?valor|valores|valor\?|pre[cç]o|ingresso|"
     r"(?:cad[eê]|qual|tem|manda|passa)\W+(?:o )?link|link (?:da|de|pra|para) (?:inscri|compra)|tem vaga|"
     r"pr[oó]xim[ao] (?:edi[cç][aã]o|data|turma|evento)|quando (?:vai|tem|ser[aá]|abre)|vai ter|"
     r"me (?:avisa|chama|manda)|(?:como|onde|quando)\b.{0,25}inscri|inscri[cç][oõ]es? (?:abert|abre)|"
@@ -48,7 +48,7 @@ SELLER = re.compile(r"\bvendo\b|repasso|troco titularidade|transfiro", re.I)
 OTHER_REGION = re.compile(
     r"\b(?:rj|mg|ba|pr|sc|rs|df|go|pe|ce|es|am|pa|mt|ms|rn|pb|al|se|pi|ma|to|ro)\b|rio de janeiro|niter[oó]i|maric[aá]|"
     r"floripa|florian[oó]polis|bras[ií]lia|belo horizonte|\bbh\b|curitiba|salvador|recife|fortaleza|"
-    r"porto alegre|goi[aâ]nia|vit[oó]ria|natal|manaus|bel[eé]m|bauru|ribeir[aã]o preto|portugal|lisboa|"
+    r"porto alegre|goi[aâ]nia|vit[oó]ria|natal|manaus|bel[eé]m|bauru|ribeir[aã]o preto|portugal|lisboa|\bporto\b|rio tinto|braga\b|🇵🇹|"
     r"\busa\b|eua|miami|argentina|paraguai",
     re.I,
 )
