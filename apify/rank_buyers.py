@@ -142,7 +142,7 @@ def suggested_dm(lead):
     """DM personalizada; o texto varia por pessoa (hash do @) para não sair idêntico em todas."""
     k = sum(map(ord, lead["username"]))
     hi = f"Oi, {lead['nome']}, tudo bem?" if lead["nome"] else "Oi, tudo bem?"
-    where = f"no post da @{lead['post_owner']}" if lead["post_owner"] else "num post"
+    where = f"no post de @{lead['post_owner']}" if lead["post_owner"] else "num post"
     pitch = PITCH[k % len(PITCH)]
     date = "Dia 07/11 acontece"
     if lead["intencao"] == "forte":
