@@ -69,6 +69,11 @@ OWN_PRODUCT = re.compile(
     re.I,
 )
 
+# Texto em português: separa criador brasileiro de estrangeiro (espanhol divide "para", "con")
+PT_BR = re.compile(r"ç[aã]o|ções|\bvoc[eê]\b|\bn[aã]o\b|\bbrasil|🇧🇷|\bsa[uú]de\b|\bpra\b", re.I)
+# Conta de marca, app ou veículo: não é influencer para permuta
+BRAND_CATEGORY = re.compile(r"brand|marca|product|produto|app page|company|empresa|media|news|shopping|retail", re.I)
+
 
 def load(path):
     with open(path, encoding="utf-8") as f:
@@ -126,6 +131,11 @@ def score_profile(p):
     # Parceria sem cachê: quem já faz evento e vende produto próprio
     score += min(events, 3) * 6
     score += min(own_product, 3) * 6
+    # Criador brasileiro, não marca
+    brasil = len(PT_BR.findall(all_text)) >= 3
+    marca = bool(BRAND_CATEGORY.search(p.get("businessCategoryName") or ""))
+    score -= 0 if brasil else 40
+    score -= 30 if marca else 0
     # Contas gigantes tendem a público jovem/massa: penaliza engajamento baixo
     if followers > 1_000_000 and engagement < 1:
         score -= 15
@@ -145,6 +155,8 @@ def score_profile(p):
         "marcas_premium": ", ".join(brands),
         "sinais_evento": events,
         "sinais_produto_proprio": own_product,
+        "brasil": brasil,
+        "conta_marca": marca,
         "verificado": p.get("verified"),
         "categoria": p.get("businessCategoryName"),
         "link_bio": p.get("externalUrl"),
