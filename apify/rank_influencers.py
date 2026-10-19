@@ -6,6 +6,12 @@ Uso:
 
   # 2) Rankeia os perfis exportados pelo apify/instagram-profile-scraper
   python rank_influencers.py rank profiles.json > ranking.csv
+
+  # Parceria (permuta, evento em conjunto, co-venda): só 500 mil+, sem teto
+  python rank_influencers.py rank --min 500000 --max 0 profiles.json > ranking_parceria.csv
+
+  # 3) Expande a base pelos "perfis relacionados" do profile-scraper (rodar de novo)
+  python rank_influencers.py related profiles.json > usernames_relacionados.txt
 """
 import csv
 import json
@@ -50,6 +56,18 @@ PREMIUM_BRANDS = re.compile(
     r"txai|club med|smartfit|bodytech|technogym|on running|hoka|asics",
     re.I,
 )
+# Já produz evento próprio: candidato a co-criar um evento no Roga
+EVENTS = re.compile(
+    r"retiro|imers[aã]o|workshop|evento|encontro|ingresso|sympla|eventbrite|"
+    r"vagas|turn[eê]|aul[aã]o|vivência|festival|summit|experi[eê]ncia",
+    re.I,
+)
+# Vende produto próprio para a audiência: aceita permuta e co-venda em vez de cachê
+OWN_PRODUCT = re.compile(
+    r"curso|mentoria|m[eé]todo|programa|comunidade|assinatura|clube|app\b|"
+    r"e-?book|desafio|marca pr[oó]pria|hotmart|kiwify|eduzz|@\w+(store|shop|oficial|brand)",
+    re.I,
+)
 
 
 def load(path):
@@ -88,6 +106,8 @@ def score_profile(p):
     niche_hits = len(set(m.lower() for m in NICHE.findall(all_text)))
     mature = len(set(m.lower() for m in MATURE_AUDIENCE.findall(all_text)))
     brands = sorted(set(m.lower() for m in PREMIUM_BRANDS.findall(all_text)))
+    events = len(set(m.lower() for m in EVENTS.findall(all_text)))
+    own_product = len(set(m.lower() for m in OWN_PRODUCT.findall(all_text)))
 
     score = 0.0
     # Engajamento: alvo >= 1,5% (macro) / >= 2,5% (mid)
@@ -103,6 +123,9 @@ def score_profile(p):
     score += min(niche_hits, 5) * 3
     score += min(len(brands), 3) * 5
     score += min(mature, 3) * 6
+    # Parceria sem cachê: quem já faz evento e vende produto próprio
+    score += min(events, 3) * 6
+    score += min(own_product, 3) * 6
     # Contas gigantes tendem a público jovem/massa: penaliza engajamento baixo
     if followers > 1_000_000 and engagement < 1:
         score -= 15
@@ -120,6 +143,8 @@ def score_profile(p):
         "nichos": niche_hits,
         "sinais_publico_30_55": mature,
         "marcas_premium": ", ".join(brands),
+        "sinais_evento": events,
+        "sinais_produto_proprio": own_product,
         "verificado": p.get("verified"),
         "categoria": p.get("businessCategoryName"),
         "link_bio": p.get("externalUrl"),
@@ -128,12 +153,24 @@ def score_profile(p):
     }
 
 
-def cmd_rank(paths):
-    rows = []
+def cmd_rank(args):
+    lo, hi, paths = MIN_FOLLOWERS, MAX_FOLLOWERS, []
+    it = iter(args)
+    for a in it:
+        if a == "--min":
+            lo = int(next(it))
+        elif a == "--max":
+            hi = int(next(it)) or float("inf")
+        else:
+            paths.append(a)
+    rows, seen = [], set()
     for path in paths:
         for p in load(path):
             followers = p.get("followersCount") or 0
-            if MIN_FOLLOWERS <= followers <= MAX_FOLLOWERS and not p.get("private"):
+            if p.get("username") in seen:
+                continue
+            seen.add(p.get("username"))
+            if lo <= followers <= hi and not p.get("private"):
                 rows.append(score_profile(p))
     rows.sort(key=lambda r: r["score"], reverse=True)
     if not rows:
@@ -143,7 +180,21 @@ def cmd_rank(paths):
     w.writerows(rows)
 
 
+def cmd_related(paths):
+    known, counts = set(), Counter()
+    for path in paths:
+        for p in load(path):
+            known.add(p.get("username"))
+            for r in p.get("relatedProfiles") or []:
+                if r.get("username"):
+                    counts[r["username"]] += 1
+    for name, _ in counts.most_common():
+        if name not in known:
+            print(name)
+
+
 if __name__ == "__main__":
-    if len(sys.argv) < 3 or sys.argv[1] not in ("usernames", "rank"):
+    cmds = {"usernames": cmd_usernames, "rank": cmd_rank, "related": cmd_related}
+    if len(sys.argv) < 3 or sys.argv[1] not in cmds:
         sys.exit(__doc__)
-    {"usernames": cmd_usernames, "rank": cmd_rank}[sys.argv[1]](sys.argv[2:])
+    cmds[sys.argv[1]](sys.argv[2:])
