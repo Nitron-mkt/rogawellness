@@ -74,6 +74,17 @@ PT_BR = re.compile(r"ç[aã]o|ções|\bvoc[eê]\b|\bn[aã]o\b|\bbrasil|🇧🇷|
 # Conta de marca, app ou veículo: não é influencer para permuta
 BRAND_CATEGORY = re.compile(r"brand|marca|product|produto|app page|company|empresa|media|news|shopping|retail", re.I)
 
+# Já aceitou experiência em troca de conteúdo: o melhor indício de que topa permuta
+INVITE = re.compile(r"a convite|#convite|convidad[ao] (d[aeo]|pel[ao])|#recebido|recebidos|"
+                    r"hospedad[ao]|#hospedagem|cortesia|#press|presskit|experi[eê]ncia (incr|[uú]nica)", re.I)
+# Página, corte ou canal temático: não é uma pessoa que pode viver o Roga
+PAGE = re.compile(r"trechos|cortes|clips|\bdicas|receitas|frases|memes|curiosidades|pensament|"
+                  r"fatos|not[ií]cias|humor \w+ e|entre no grupo|promo[cç][oõ]es|p[aá]gina|"
+                  r"filmes|s[eé]ries|cl[aá]ssicos|achados|ofertas|perfil oficial d[aeo] (programa|marca)", re.I)
+# Fala na primeira pessoa, profissão ou vida pessoal: indício de pessoa (confirmar olhando o perfil)
+PERSON = re.compile(r"\b(eu|minha|meu|sou|m[aã]e d|pai d|esposa|marido)\b|cref|crn|crm|"
+                    r"professor|treinador|nutricionista|m[eé]dic[oa]|atleta|personal", re.I)
+
 
 def load(path):
     with open(path, encoding="utf-8") as f:
@@ -92,7 +103,18 @@ def cmd_usernames(paths):
         print(name)
 
 
+def median(xs):
+    xs = sorted(xs)
+    n = len(xs)
+    return 0 if not n else (xs[n // 2] if n % 2 else (xs[n // 2 - 1] + xs[n // 2]) / 2)
+
+
 def score_profile(p):
+    """Score 0-100 para convite ao Wellness Day: engajamento real 40 · topa permuta 30 · fit Roga 30.
+
+    "pessoa_real" e "brasil" não entram no score: são filtro. Conta que não é pessoa não deve
+    ser rankeada, deve sair da lista.
+    """
     followers = p.get("followersCount") or 0
     bio = " ".join(filter(None, [p.get("biography"), p.get("fullName"),
                                  p.get("externalUrl"), p.get("businessCategoryName")]))
@@ -100,52 +122,49 @@ def score_profile(p):
     captions = [(x.get("caption") or "") for x in posts]
     all_text = bio + " " + " ".join(captions)
 
-    interactions = [(x.get("likesCount") or 0) + (x.get("commentsCount") or 0) for x in posts]
-    interactions = [i for i in interactions if i >= 0]
-    engagement = (sum(interactions) / len(interactions) / followers * 100) if followers and interactions else 0
+    # Mediana, não média: um viral não pode carregar o perfil
+    valid = [x for x in posts if (x.get("likesCount") or 0) >= 0]
+    eng = median([((x.get("likesCount") or 0) + (x.get("commentsCount") or 0)) / followers * 100
+                  for x in valid]) if followers else 0
+    com = median([(x.get("commentsCount") or 0) / followers * 100 for x in valid]) if followers else 0
 
     publis = sum(1 for c in captions if PUBLI.search(c))
     coupon_posts = sum(1 for c in captions if COUPON_CAPTION.search(c))
     affiliate_bio = bool(AFFILIATE_BIO.search(bio))
+    invites = sum(1 for c in captions if INVITE.search(c))
     sp = bool(SP_REGION.search(all_text))
     niche_hits = len(set(m.lower() for m in NICHE.findall(all_text)))
     mature = len(set(m.lower() for m in MATURE_AUDIENCE.findall(all_text)))
     brands = sorted(set(m.lower() for m in PREMIUM_BRANDS.findall(all_text)))
     events = len(set(m.lower() for m in EVENTS.findall(all_text)))
     own_product = len(set(m.lower() for m in OWN_PRODUCT.findall(all_text)))
-
-    score = 0.0
-    # Engajamento: alvo >= 1,5% (macro) / >= 2,5% (mid)
-    target = 1.5 if followers >= 500_000 else 2.5
-    score += min(engagement / target, 2) * 25
-    # Hábito de afiliado / venda
-    score += 20 if affiliate_bio else 0
-    score += min(coupon_posts, 4) * 5
-    # Publis: 1-6 em ~12 posts é saudável; acima disso, saturado
-    score += 10 if 1 <= publis <= 6 else (3 if publis > 6 else 0)
-    # Região e nicho
-    score += 15 if sp else 0
-    score += min(niche_hits, 5) * 3
-    score += min(len(brands), 3) * 5
-    score += min(mature, 3) * 6
-    # Parceria sem cachê: quem já faz evento e vende produto próprio
-    score += min(events, 3) * 6
-    score += min(own_product, 3) * 6
-    # Criador brasileiro, não marca
     brasil = len(PT_BR.findall(all_text)) >= 3
     marca = bool(BRAND_CATEGORY.search(p.get("businessCategoryName") or ""))
-    score -= 0 if brasil else 40
-    score -= 30 if marca else 0
-    # Contas gigantes tendem a público jovem/massa: penaliza engajamento baixo
-    if followers > 1_000_000 and engagement < 1:
-        score -= 15
+    pagina = bool(PAGE.search(" ".join(filter(None, [p.get("username"), p.get("fullName"), p.get("biography")]))))
+    pessoa = not (marca or pagina) and bool(PERSON.search(all_text))
+
+    # 1. Engajamento real (40): mediana contra a referência do porte + comentário (comunidade de verdade)
+    bench = 1.5 if followers < 1_000_000 else (1.0 if followers < 3_000_000 else 0.7)
+    s_eng = min(eng / bench, 1.0) * 30 + min(com / 0.03, 1.0) * 10
+    # 2. Topa permuta (30): já aceita convite/recebido, já faz evento, já vende pela audiência
+    s_perm = (min(invites, 2) * 6 + min(events, 2) * 4 + min(own_product, 2) * 2
+              + (3 if affiliate_bio or coupon_posts else 0) + (1 if 1 <= publis <= 6 else 0))
+    s_perm = min(s_perm, 30)
+    # 3. Fit Roga Wellness (30): nicho, público 30-55, marcas premium, região
+    s_fit = min(min(niche_hits, 5) * 3 + min(mature, 3) * 3 + min(len(brands), 2) * 3 + (6 if sp else 0), 30)
 
     return {
         "username": p.get("username"),
         "url": f"https://instagram.com/{p.get('username')}",
         "nome": p.get("fullName"),
         "seguidores": followers,
-        "engajamento_%": round(engagement, 2),
+        "pessoa_real": pessoa,
+        "brasil": brasil,
+        "engajamento_mediano_%": round(eng, 2),
+        "comentarios_mediano_%": round(com, 3),
+        "posts_a_convite": invites,
+        "sinais_evento": events,
+        "sinais_produto_proprio": own_product,
         "afiliado_bio": affiliate_bio,
         "posts_com_cupom": coupon_posts,
         "publis_ultimos_posts": publis,
@@ -153,15 +172,14 @@ def score_profile(p):
         "nichos": niche_hits,
         "sinais_publico_30_55": mature,
         "marcas_premium": ", ".join(brands),
-        "sinais_evento": events,
-        "sinais_produto_proprio": own_product,
-        "brasil": brasil,
-        "conta_marca": marca,
         "verificado": p.get("verified"),
         "categoria": p.get("businessCategoryName"),
         "link_bio": p.get("externalUrl"),
         "bio": (p.get("biography") or "").replace("\n", " "),
-        "score": round(score, 1),
+        "score_engajamento": round(s_eng, 1),
+        "score_permuta": round(s_perm, 1),
+        "score_fit": round(s_fit, 1),
+        "score": round(s_eng + s_perm + s_fit, 1),
     }
 
 
@@ -184,7 +202,8 @@ def cmd_rank(args):
             seen.add(p.get("username"))
             if lo <= followers <= hi and not p.get("private"):
                 rows.append(score_profile(p))
-    rows.sort(key=lambda r: r["score"], reverse=True)
+    # Pessoa real e brasileira primeiro: o resto fica no fim só para conferência
+    rows.sort(key=lambda r: (r["pessoa_real"] and r["brasil"], r["score"]), reverse=True)
     if not rows:
         sys.exit("Nenhum perfil dentro da faixa de seguidores.")
     w = csv.DictWriter(sys.stdout, fieldnames=list(rows[0].keys()))
