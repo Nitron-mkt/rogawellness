@@ -1,0 +1,18 @@
+{
+  "directUrls": [
+    "https://www.instagram.com/uniquegarden/",
+    "https://www.instagram.com/hotelpontodeluz/",
+    "https://www.instagram.com/botaniquehotel/",
+    "https://www.instagram.com/palaciotangara/",
+    "https://www.instagram.com/hotelemiliano/",
+    "https://www.instagram.com/fasano/",
+    "https://www.instagram.com/kuroteloficial/",
+    "https://www.instagram.com/lapinhaspa/",
+    "https://www.instagram.com/orituaali/",
+    "https://www.instagram.com/bourbonhospitalidade/"
+  ],
+  "resultsType": "posts",
+  "resultsLimit": 12,
+  "onlyPostsNewerThan": "2026-07-15",
+  "addParentData": false
+}
