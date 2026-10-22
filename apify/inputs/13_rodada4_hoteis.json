@@ -1,0 +1,17 @@
+{
+  "directUrls": [
+    "https://www.instagram.com/tauaresorts/",
+    "https://www.instagram.com/spamed/",
+    "https://www.instagram.com/hoteltoriba/",
+    "https://www.instagram.com/hotelunique/",
+    "https://www.instagram.com/fasanoboavista/",
+    "https://www.instagram.com/fasanosaopaulo/",
+    "https://www.instagram.com/txairesorts/",
+    "https://www.instagram.com/clubmedbrasil/",
+    "https://www.instagram.com/resortfazendasaojoao/"
+  ],
+  "resultsType": "posts",
+  "resultsLimit": 15,
+  "onlyPostsNewerThan": "2026-07-01",
+  "addParentData": false
+}
