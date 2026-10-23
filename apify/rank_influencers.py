@@ -33,7 +33,7 @@ COUPON_CAPTION = re.compile(r"cupom|c[oó]digo|use o|link na bio|%\s*off|descont
 SP_REGION = re.compile(
     r"\bsp\b|s[aã]o paulo|campinas|atibaia|jundia[ií]|alphaville|"
     r"granja viana|bragan[cç]a|s[aã]o jos[eé] dos campos|valinhos|vinhedo|"
-    r"santana de parna[ií]ba|barueri|santos|sorocaba|ribeir[aã]o preto|piracicaba|"
+    r"santana de parna[ií]ba|barueri|santos ?[-/,] ?sp|baixada santista|sorocaba|ribeir[aã]o preto|piracicaba|"
     r"guarulhos|osasco|s[aã]o bernardo|santo andr[eé]|mogi|indaiatuba|itu\b|"
     r"crm[- /]?sp|cref[^\n]{0,15}sp|crn[- ]?3\b",
     re.I,
