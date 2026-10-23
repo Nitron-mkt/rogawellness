@@ -33,7 +33,9 @@ COUPON_CAPTION = re.compile(r"cupom|c[oó]digo|use o|link na bio|%\s*off|descont
 SP_REGION = re.compile(
     r"\bsp\b|s[aã]o paulo|campinas|atibaia|jundia[ií]|alphaville|"
     r"granja viana|bragan[cç]a|s[aã]o jos[eé] dos campos|valinhos|vinhedo|"
-    r"santana de parna[ií]ba|barueri|santos|sorocaba",
+    r"santana de parna[ií]ba|barueri|santos|sorocaba|ribeir[aã]o preto|piracicaba|"
+    r"guarulhos|osasco|s[aã]o bernardo|santo andr[eé]|mogi|indaiatuba|itu\b|"
+    r"crm[- /]?sp|cref[^\n]{0,15}sp|crn[- ]?3\b",
     re.I,
 )
 NICHE = re.compile(
@@ -132,7 +134,10 @@ def score_profile(p):
     coupon_posts = sum(1 for c in captions if COUPON_CAPTION.search(c))
     affiliate_bio = bool(AFFILIATE_BIO.search(bio))
     invites = sum(1 for c in captions if INVITE.search(c))
-    sp = bool(SP_REGION.search(all_text))
+    # Localização marcada nos posts é o sinal mais forte de onde a pessoa vive
+    locations = [x.get("locationName") or "" for x in posts]
+    sp_posts = sum(1 for loc in locations if loc and SP_REGION.search(loc))
+    sp = bool(SP_REGION.search(all_text)) or sp_posts > 0
     niche_hits = len(set(m.lower() for m in NICHE.findall(all_text)))
     mature = len(set(m.lower() for m in MATURE_AUDIENCE.findall(all_text)))
     brands = sorted(set(m.lower() for m in PREMIUM_BRANDS.findall(all_text)))
@@ -169,6 +174,7 @@ def score_profile(p):
         "posts_com_cupom": coupon_posts,
         "publis_ultimos_posts": publis,
         "regiao_sp": sp,
+        "posts_em_sp": sp_posts,
         "nichos": niche_hits,
         "sinais_publico_30_55": mature,
         "marcas_premium": ", ".join(brands),
