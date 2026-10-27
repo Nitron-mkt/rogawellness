@@ -7,6 +7,9 @@ Uso:
   # 2) Rankeia os perfis exportados pelo apify/instagram-profile-scraper
   python rank_influencers.py rank profiles.json > ranking.csv
 
+  # Score v4: educador de bem-estar com comunidade que compra (curso, formação, alunos, retiro)
+  python rank_influencers.py rank --min 15000 --max 0 profiles.json > ranking_educadores.csv
+
   # Parceria (permuta, evento em conjunto, co-venda): só 500 mil+, sem teto
   python rank_influencers.py rank --min 500000 --max 0 profiles.json > ranking_parceria.csv
 
@@ -49,7 +52,7 @@ MATURE_AUDIENCE = re.compile(
     r"m[aã]e d[eao]|maternidade|filhos|executiva|empres[aá]ria|fundadora|ceo|"
     r"m[eé]dica|dermato|nutr[oó]loga|endocrino|fisioterapeuta|psic[oó]loga|"
     r"menopausa|climat[eé]rio|40\+|50\+|longevidade|reposi[cç][aã]o hormonal|"
-    r"marca pr[oó]pria|@\w+(store|shop|oficial)",
+    r"marca pr[oó]pria|@\w+(?:store|shop|oficial)",
     re.I,
 )
 PREMIUM_BRANDS = re.compile(
@@ -75,9 +78,37 @@ EVENTS = re.compile(
 # Vende produto próprio para a audiência: aceita permuta e co-venda em vez de cachê
 OWN_PRODUCT = re.compile(
     r"curso|mentoria|m[eé]todo|programa|comunidade|assinatura|clube|app\b|"
-    r"e-?book|desafio|marca pr[oó]pria|hotmart|kiwify|eduzz|@\w+(store|shop|oficial|brand)",
+    r"e-?book|desafio|marca pr[oó]pria|hotmart|kiwify|eduzz|@\w+(?:store|shop|oficial|brand)",
     re.I,
 )
+
+# Educador com comunidade: vende curso/formação/mentoria e tem alunos (o perfil ideal do Roga)
+EDUCATOR = re.compile(
+    r"alun[oa]s|turma|forma[cç][aã]o|mentoria|mentorad|curso|m[eé]todo|escola|instituto|"
+    r"inscri[cç][oõ]es|lista de espera|vagas (?:abertas|limitadas)|matr[ií]cula|certifica|"
+    r"programa de \w+|comunidade|membros|assinatura|plataforma|aulas? ao vivo|"
+    r"hotmart|kiwify|eduzz|memberkit|greenn|ticto|monetizze|cademi|herospark|sympla",
+    re.I,
+)
+# "+20 mil alunas", "4.000 alunos": comunidade já comprou dele
+STUDENTS = re.compile(r"\+?\s?(\d+[.,]?\d*)\s?(mil|k)?\s+(alun[oa]s|mentorad[oa]s|membros|pacientes atendid|mulheres transformad|pessoas transformad|vidas transformad|praticantes)", re.I)
+# Produto de ticket alto em bem-estar: experiência presencial e transformação longa
+HIGH_TICKET = re.compile(
+    r"retiro|imers[aã]o|presencial|forma[cç][aã]o|mentoria|vivência|jornada|"
+    r"r\$\s?\d\.?\d{3}|\b(?:1|2|3|4|5)\.?\d{3},?\d{0,2} reais|12x|parcel",
+    re.I,
+)
+WELLNESS_CORE = re.compile(
+    r"yoga|medita|mindful|respira|breath|pranayama|sound|ta[cç]a tibetana|ayurveda|"
+    r"longevidade|integrativ|funcional|anti-?inflama|desinflama|jejum|horm[oô]ni|menopausa|"
+    r"sono|estresse|ansiedade|autoconhecimento|banho de gelo|crioterapia|trilha|montanha|"
+    r"trail|ultra|natureza|pilates|mobilidade|corrida|nutri",
+    re.I,
+)
+# Celebridade/entretenimento: audiência grande mas não compra transformação de bem-estar
+CELEB = re.compile(r"\batriz\b|\bator\b|apresentador|tv host|cantor|modelo\b|\bmodel\b|reality|bbb|"
+                   r"actress|actor|jornalista|influenciadora de moda|fashion|deputad|vereador|senador|#22\b", re.I)
+CELEB_CATEGORY = re.compile(r"actor|artist|musician|\\btv\\b|politic|fashion|model", re.I)
 
 # Texto em português: separa criador brasileiro de estrangeiro (espanhol divide "para", "con")
 PT_BR = re.compile(r"ç[aã]o|ções|\bvoc[eê]\b|\bn[aã]o\b|\bbrasil|🇧🇷|\bsa[uú]de\b|\bpra\b", re.I)
@@ -120,7 +151,10 @@ def median(xs):
 
 
 def score_profile(p):
-    """Score 0-100 para convite ao Wellness Day: engajamento real 40 · topa permuta 30 · fit Roga 30.
+    """Score 0-100 (v4): educador de bem-estar com comunidade que compra.
+
+    Comunidade/infoproduto 40 · ticket alto 20 · engajamento 15 · SP 10 · nicho wellness 15.
+    Celebridade sem produto de educação perde metade; sem nenhum sinal de educador, fica com 40%.
 
     "pessoa_real" e "brasil" não entram no score: são filtro. Conta que não é pessoa não deve
     ser rankeada, deve sair da lista.
@@ -156,18 +190,42 @@ def score_profile(p):
     pagina = bool(PAGE.search(" ".join(filter(None, [p.get("username"), p.get("fullName"), p.get("biography")]))))
     pessoa = not (marca or pagina) and bool(PERSON.search(all_text))
 
-    # 1. Engajamento real (40): mediana contra a referência do porte + comentário (comunidade de verdade)
-    bench = 1.5 if followers < 1_000_000 else (1.0 if followers < 3_000_000 else 0.7)
-    s_eng = min(eng / bench, 1.0) * 30 + min(com / 0.03, 1.0) * 10
-    # 2. Topa permuta (30): já aceita convite/recebido, já faz evento, já vende pela audiência
-    s_perm = (min(invites, 2) * 6 + min(events, 2) * 4 + min(own_product, 2) * 2
-              + (3 if affiliate_bio or coupon_posts else 0) + (1 if 1 <= publis <= 6 else 0))
-    s_perm = min(s_perm, 30)
-    # 3. Fit Roga Wellness (30): nicho, público 30-55, marcas premium, região
+    # v4 · "educador de bem-estar com comunidade que já compra": comunidade 40 · ticket 20 · engajamento 15 · SP 10 · nicho 15
+    edu = len(set(m.lower() for m in EDUCATOR.findall(all_text)))
+    students = 0
+    for n, mil, _ in STUDENTS.findall(all_text):
+        try:
+            v = float(n.replace(".", "").replace(",", "."))
+        except ValueError:
+            continue
+        students = max(students, int(v * 1000 if mil else v))
+    ticket = len(set(m.lower() for m in HIGH_TICKET.findall(all_text)))
+    core = len(set(m.lower() for m in WELLNESS_CORE.findall(all_text)))
+    celeb = bool(CELEB.search(bio)) or bool(CELEB_CATEGORY.search(p.get("businessCategoryName") or ""))
+
+    # 1. Comunidade que compra (40): sinais de curso/formação + alunos declarados + já faz evento
+    s_comm = min(edu, 6) * 4 + (10 if students >= 1000 else 5 if students > 0 else 0) + min(events, 2) * 3
+    s_comm = min(s_comm, 40)
+    # 2. Ticket alto (20): retiro, imersão, formação, mentoria, preço de 4 dígitos, alta renda nos posts
     locs_text = " ".join(locations)
     high_income = len(set(m.lower() for m in HIGH_INCOME.findall(all_text + " " + locs_text)))
-    s_fit = min(min(niche_hits, 5) * 3 + min(mature, 3) * 3 + min(len(brands), 2) * 3
-                + min(high_income, 3) * 2 + (6 if sp else 0), 30)
+    s_ticket = min(min(ticket, 4) * 4 + min(high_income, 2) * 2 + min(len(brands), 1) * 2, 20)
+    # 3. Engajamento real (15): mediana contra o porte, comentário pesa (comunidade conversa)
+    bench = 1.5 if followers < 1_000_000 else (1.0 if followers < 3_000_000 else 0.7)
+    s_eng = min(eng / bench, 1.0) * 9 + min(com / 0.03, 1.0) * 6
+    # 4. SP (10) e 5. nicho wellness (15)
+    s_sp = 10 if sp_posts > 0 else (6 if sp else 0)
+    s_fit = min(core, 5) * 3
+    score = s_comm + s_ticket + s_eng + s_sp + s_fit
+    # Celebridade sem produto de educação não é o perfil: corta pela metade
+    if celeb and edu < 3:
+        score *= 0.5
+    # Sem nenhum sinal de curso/aluno/comunidade: não é educador, vai para o fim
+    if edu == 0:
+        score *= 0.4
+    # Mantidos para referência (modelo v3 de permuta)
+    s_perm = min(min(invites, 2) * 6 + min(events, 2) * 4 + min(own_product, 2) * 2
+                 + (3 if affiliate_bio or coupon_posts else 0) + (1 if 1 <= publis <= 6 else 0), 30)
 
     return {
         "username": p.get("username"),
@@ -194,10 +252,18 @@ def score_profile(p):
         "categoria": p.get("businessCategoryName"),
         "link_bio": p.get("externalUrl"),
         "bio": (p.get("biography") or "").replace("\n", " "),
+        "sinais_educador": edu,
+        "alunos_declarados": students,
+        "sinais_ticket_alto": ticket,
+        "nicho_wellness": core,
+        "celebridade": celeb,
+        "score_comunidade": round(s_comm, 1),
+        "score_ticket": round(s_ticket, 1),
         "score_engajamento": round(s_eng, 1),
-        "score_permuta": round(s_perm, 1),
+        "score_sp": s_sp,
         "score_fit": round(s_fit, 1),
-        "score": round(s_eng + s_perm + s_fit, 1),
+        "score_permuta_v3": round(s_perm, 1),
+        "score": round(score, 1),
     }
 
 
