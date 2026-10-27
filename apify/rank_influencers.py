@@ -58,6 +58,14 @@ PREMIUM_BRANDS = re.compile(
     r"txai|club med|smartfit|bodytech|technogym|on running|hoka|asics",
     re.I,
 )
+# Lugares e viagens de alto padrão nos posts: público que paga ticket alto
+HIGH_INCOME = re.compile(
+    r"fasano|hotel unique|rosewood|cidade jardim|jk iguatemi|iguatemi|jardins|itaim|"
+    r"vila nova concei|faria lima|trancoso|noronha|uxua|botanique|kurotel|txai|"
+    r"club med|mykonos|amalfi|paris|london|londres|nova york|new york|dubai|tulum|"
+    r"maldiv|aspen|lululemon|aloyoga|alo\b|on running|whoop|oura|garmin",
+    re.I,
+)
 # Já produz evento próprio: candidato a co-criar um evento no Roga
 EVENTS = re.compile(
     r"retiro|imers[aã]o|workshop|evento|encontro|ingresso|sympla|eventbrite|"
@@ -156,7 +164,10 @@ def score_profile(p):
               + (3 if affiliate_bio or coupon_posts else 0) + (1 if 1 <= publis <= 6 else 0))
     s_perm = min(s_perm, 30)
     # 3. Fit Roga Wellness (30): nicho, público 30-55, marcas premium, região
-    s_fit = min(min(niche_hits, 5) * 3 + min(mature, 3) * 3 + min(len(brands), 2) * 3 + (6 if sp else 0), 30)
+    locs_text = " ".join(locations)
+    high_income = len(set(m.lower() for m in HIGH_INCOME.findall(all_text + " " + locs_text)))
+    s_fit = min(min(niche_hits, 5) * 3 + min(mature, 3) * 3 + min(len(brands), 2) * 3
+                + min(high_income, 3) * 2 + (6 if sp else 0), 30)
 
     return {
         "username": p.get("username"),
@@ -178,6 +189,7 @@ def score_profile(p):
         "nichos": niche_hits,
         "sinais_publico_30_55": mature,
         "marcas_premium": ", ".join(brands),
+        "sinais_alta_renda": high_income,
         "verificado": p.get("verified"),
         "categoria": p.get("businessCategoryName"),
         "link_bio": p.get("externalUrl"),
