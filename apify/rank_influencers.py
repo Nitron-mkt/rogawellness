@@ -7,7 +7,7 @@ Uso:
   # 2) Rankeia os perfis exportados pelo apify/instagram-profile-scraper
   python rank_influencers.py rank profiles.json > ranking.csv
 
-  # Score v4: educador de bem-estar com comunidade que compra (curso, formação, alunos, retiro)
+  # Score v5: educador de bem-estar com comunidade que compra (curso, formação, alunos, retiro)
   python rank_influencers.py rank --min 15000 --max 0 profiles.json > ranking_educadores.csv
 
   # Parceria (permuta, evento em conjunto, co-venda): só 500 mil+, sem teto
@@ -21,6 +21,7 @@ import json
 import re
 import sys
 from collections import Counter
+from datetime import datetime, timezone
 
 MIN_FOLLOWERS = 50_000
 MAX_FOLLOWERS = 2_000_000
@@ -87,7 +88,8 @@ EDUCATOR = re.compile(
     r"alun[oa]s|turma|forma[cç][aã]o|mentoria|mentorad|curso|m[eé]todo|escola|instituto|"
     r"inscri[cç][oõ]es|lista de espera|vagas (?:abertas|limitadas)|matr[ií]cula|certifica|"
     r"programa de \w+|comunidade|membros|assinatura|plataforma|aulas? ao vivo|"
-    r"hotmart|kiwify|eduzz|memberkit|greenn|ticto|monetizze|cademi|herospark|sympla",
+    r"hotmart|hotm\.io|kiwify|eduzz|memberkit|greenn|ticto|monetizze|cademi|herospark|sympla|"
+    r"protocolo|miss[aã]o|desafio|grupo vip|e-?book|\bead\b|congresso|\blp\.|/lp\b|clube|black friday",
     re.I,
 )
 # "+20 mil alunas", "4.000 alunos": comunidade já comprou dele
@@ -108,7 +110,10 @@ WELLNESS_CORE = re.compile(
 # Celebridade/entretenimento: audiência grande mas não compra transformação de bem-estar
 CELEB = re.compile(r"\batriz\b|\bator\b|apresentador|tv host|cantor|modelo\b|\bmodel\b|reality|bbb|"
                    r"actress|actor|jornalista|influenciadora de moda|fashion|deputad|vereador|senador|#22\b", re.I)
-CELEB_CATEGORY = re.compile(r"actor|artist|musician|\\btv\\b|politic|fashion|model", re.I)
+# Profissional de saúde com registro: médico, nutricionista, nutrólogo
+HEALTH_PRO = re.compile(r"\bcrm|\bcrn|\brqe|m[eé]dic[oa]\b|nutri|nutr[oó]log|ph\.?d|\bdra?\.?\s|"
+                        r"endocrino|cardiolog|ginecolog|psiquiatr|dermatolog|ortopedi|medicina", re.I)
+CELEB_CATEGORY = re.compile(r"actor|artist|musician|\btv\b|politic|fashion|model", re.I)
 
 # Texto em português: separa criador brasileiro de estrangeiro (espanhol divide "para", "con")
 PT_BR = re.compile(r"ç[aã]o|ções|\bvoc[eê]\b|\bn[aã]o\b|\bbrasil|🇧🇷|\bsa[uú]de\b|\bpra\b", re.I)
@@ -150,10 +155,33 @@ def median(xs):
     return 0 if not n else (xs[n // 2] if n % 2 else (xs[n // 2 - 1] + xs[n // 2]) / 2)
 
 
-def score_profile(p):
-    """Score 0-100 (v4): educador de bem-estar com comunidade que compra.
+def posting(posts, now=None):
+    """Frequência: posts por semana (mediana dos intervalos) e dias desde o último post.
 
-    Comunidade/infoproduto 40 · ticket alto 20 · engajamento 15 · SP 10 · nicho wellness 15.
+    O latestPosts traz posts fixados antigos; ordenar por data e usar só os 10 mais recentes.
+    """
+    now = now or datetime.now(timezone.utc)
+    ts = []
+    for x in posts:
+        t = x.get("timestamp")
+        if t:
+            try:
+                ts.append(datetime.fromisoformat(t.replace("Z", "+00:00")))
+            except ValueError:
+                pass
+    ts = sorted(ts, reverse=True)[:10]
+    if not ts:
+        return None, None
+    last = (now - ts[0]).days
+    gaps = [(a - b).total_seconds() / 86400 for a, b in zip(ts, ts[1:])]
+    gap = median(gaps) if gaps else 30
+    return round(7 / max(gap, 0.5), 1), last
+
+
+def score_profile(p):
+    """Score 0-100 (v5): educador de bem-estar com comunidade que compra e posta com frequência.
+
+    Comunidade/infoproduto 35 · ticket alto 15 · engajamento 15 · frequência 10 · SP 10 · nicho 15.
     Celebridade sem produto de educação perde metade; sem nenhum sinal de educador, fica com 40%.
 
     "pessoa_real" e "brasil" não entram no score: são filtro. Conta que não é pessoa não deve
@@ -190,7 +218,8 @@ def score_profile(p):
     pagina = bool(PAGE.search(" ".join(filter(None, [p.get("username"), p.get("fullName"), p.get("biography")]))))
     pessoa = not (marca or pagina) and bool(PERSON.search(all_text))
 
-    # v4 · "educador de bem-estar com comunidade que já compra": comunidade 40 · ticket 20 · engajamento 15 · SP 10 · nicho 15
+    # v5 · "educador de saúde com comunidade que compra e posta":
+    # comunidade 35 · ticket 15 · engajamento 15 · frequência 10 · SP 10 · nicho 15
     edu = len(set(m.lower() for m in EDUCATOR.findall(all_text)))
     students = 0
     for n, mil, _ in STUDENTS.findall(all_text):
@@ -202,21 +231,26 @@ def score_profile(p):
     ticket = len(set(m.lower() for m in HIGH_TICKET.findall(all_text)))
     core = len(set(m.lower() for m in WELLNESS_CORE.findall(all_text)))
     celeb = bool(CELEB.search(bio)) or bool(CELEB_CATEGORY.search(p.get("businessCategoryName") or ""))
+    saude = bool(HEALTH_PRO.search(bio))
+    per_week, days_last = posting(posts)
+    # Ativo: postou nas últimas 2 semanas e mantém ao menos ~1 post por semana
+    ativo = days_last is not None and days_last <= 14 and (per_week or 0) >= 1
 
-    # 1. Comunidade que compra (40): sinais de curso/formação + alunos declarados + já faz evento
-    s_comm = min(edu, 6) * 4 + (10 if students >= 1000 else 5 if students > 0 else 0) + min(events, 2) * 3
-    s_comm = min(s_comm, 40)
-    # 2. Ticket alto (20): retiro, imersão, formação, mentoria, preço de 4 dígitos, alta renda nos posts
+    # 1. Comunidade que compra (35): curso/turma/clube/mentoria + alunos declarados + evento
+    s_comm = min(min(edu, 6) * 3.5 + (8 if students >= 1000 else 4 if students > 0 else 0) + min(events, 2) * 3, 35)
+    # 2. Ticket alto (15): retiro, imersão, formação, mentoria, preço de 4 dígitos, alta renda
     locs_text = " ".join(locations)
     high_income = len(set(m.lower() for m in HIGH_INCOME.findall(all_text + " " + locs_text)))
-    s_ticket = min(min(ticket, 4) * 4 + min(high_income, 2) * 2 + min(len(brands), 1) * 2, 20)
+    s_ticket = min(min(ticket, 3) * 4 + min(high_income, 2) * 1.5, 15)
     # 3. Engajamento real (15): mediana contra o porte, comentário pesa (comunidade conversa)
     bench = 1.5 if followers < 1_000_000 else (1.0 if followers < 3_000_000 else 0.7)
     s_eng = min(eng / bench, 1.0) * 9 + min(com / 0.03, 1.0) * 6
-    # 4. SP (10) e 5. nicho wellness (15)
+    # 4. Frequência (10): 3+ posts/semana = cheio; parado há mais de 2 semanas = zero
+    s_freq = 0 if not ativo else min((per_week or 0) / 3, 1.0) * 10
+    # 5. SP (10) e 6. nicho wellness (15)
     s_sp = 10 if sp_posts > 0 else (6 if sp else 0)
     s_fit = min(core, 5) * 3
-    score = s_comm + s_ticket + s_eng + s_sp + s_fit
+    score = s_comm + s_ticket + s_eng + s_freq + s_sp + s_fit
     # Celebridade sem produto de educação não é o perfil: corta pela metade
     if celeb and edu < 3:
         score *= 0.5
@@ -257,6 +291,11 @@ def score_profile(p):
         "sinais_ticket_alto": ticket,
         "nicho_wellness": core,
         "celebridade": celeb,
+        "profissional_saude": saude,
+        "posts_por_semana": per_week,
+        "dias_desde_ultimo_post": days_last,
+        "ativo": ativo,
+        "score_frequencia": round(s_freq, 1),
         "score_comunidade": round(s_comm, 1),
         "score_ticket": round(s_ticket, 1),
         "score_engajamento": round(s_eng, 1),
