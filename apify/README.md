@@ -77,3 +77,9 @@ Os arquivos de `saida/` têm dados de pessoas e ficam fora do git.
 
 ## Rodada 2: perfis de wellness (`inputs/9_perfis_wellness.json`)
 Ficou definida depois do teste: hashtags de corrida trouxeram o público errado. Esta rodada usa 15 perfis de yoga, sound healing, breathwork e recovery tirados dos dados do teste, e roda no **apify/instagram-scraper**.
+
+## Criadores wellness com e-mail na bio
+1. Rode o **apify/instagram-search-scraper** com `inputs/14_criadores_wellness.json` (`searchType: user`, que já devolve bio e seguidores) e exporte o resultado.
+2. `python rank_influencers.py creators search_users.json > criadores_email.csv`
+
+O filtro mantém perfis entre 10 mil e 500 mil seguidores, do nicho wellness e com **e-mail escrito na bio**. Lojas, clínicas e perfis privados ficam de fora. O Apify não extrai e-mail oculto: só vale o que o criador publicou na bio.

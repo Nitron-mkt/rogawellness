@@ -6,6 +6,9 @@ Uso:
 
   # 2) Rankeia os perfis exportados pelo apify/instagram-profile-scraper
   python rank_influencers.py rank profiles.json > ranking.csv
+
+  # 3) Criadores wellness com e-mail na bio (export do instagram-search-scraper, searchType user)
+  python rank_influencers.py creators search_users.json > criadores_email.csv
 """
 import csv
 import json
@@ -143,7 +146,55 @@ def cmd_rank(paths):
     w.writerows(rows)
 
 
+EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}")
+STORE = re.compile(r"loja|store|shop|compre|frete|pedidos|whats.*encomend|cl[ií]nica|consult[oó]rio|agende|agendamento", re.I)
+CREATOR_MIN, CREATOR_MAX = 10_000, 500_000
+
+
+def _num(v):
+    try:
+        return int(float(v))
+    except (TypeError, ValueError):
+        return 0
+
+
+def cmd_creators(paths):
+    """Criadores wellness com e-mail na bio (export do instagram-search-scraper ou do profile-scraper)."""
+    seen, rows = set(), []
+    for path in paths:
+        for p in load(path):
+            u = p.get("username")
+            if not u or u in seen:
+                continue
+            seen.add(u)
+            bio = p.get("biography") or ""
+            emails = EMAIL.findall(bio)
+            followers = _num(p.get("followersCount"))
+            text = " ".join(filter(None, [bio, p.get("fullName"), p.get("businessCategoryName")]))
+            if not emails or not (CREATOR_MIN <= followers <= CREATOR_MAX) or not NICHE.search(text) or STORE.search(text):
+                continue
+            if str(p.get("private")).lower() == "true":
+                continue
+            score = (15 if SP_REGION.search(text) else 0) + min(len(set(m.lower() for m in NICHE.findall(text))), 5) * 3 \
+                + min(len(set(m.lower() for m in MATURE_AUDIENCE.findall(text))), 3) * 6 \
+                + (10 if 30_000 <= followers <= 200_000 else 0)
+            rows.append({
+                "score": score, "username": u, "perfil": f"https://instagram.com/{u}", "nome": p.get("fullName"),
+                "seguidores": followers, "email": emails[0].rstrip("."), "regiao_sp": bool(SP_REGION.search(text)),
+                "categoria": p.get("businessCategoryName"), "link_bio": p.get("externalUrl"),
+                "bio": bio.replace("\n", " "),
+            })
+    rows.sort(key=lambda r: -r["score"])
+    if not rows:
+        sys.exit("Nenhum criador com e-mail na bio dentro dos filtros.")
+    w = csv.DictWriter(sys.stdout, fieldnames=list(rows[0].keys()), delimiter=";")
+    w.writeheader()
+    w.writerows(rows)
+    print(f"{len(rows)} criadores com e-mail", file=sys.stderr)
+
+
 if __name__ == "__main__":
-    if len(sys.argv) < 3 or sys.argv[1] not in ("usernames", "rank"):
+    cmds = {"usernames": cmd_usernames, "rank": cmd_rank, "creators": cmd_creators}
+    if len(sys.argv) < 3 or sys.argv[1] not in cmds:
         sys.exit(__doc__)
-    {"usernames": cmd_usernames, "rank": cmd_rank}[sys.argv[1]](sys.argv[2:])
+    cmds[sys.argv[1]](sys.argv[2:])
